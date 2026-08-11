@@ -1,0 +1,56 @@
+# demo-matrix — a dogfooding repo for the matrix design (2026-08-11).
+# Fake project, real pipeline: three "streams" flow through per-lane
+# test → publish edges (matrix as: jobs — one broken stream must never
+# block the others), and a CI-style suite runs as one fused node
+# (matrix as: workflow — variants succeed or fail as a unit).
+#
+# demo-* repos exercise engine features end-to-end on the production
+# instance without touching the pipemesh/pipemesh mainline.
+app: demo-matrix
+
+pipeline:
+  stages: [test, publish]
+
+  jobs:
+    # as: workflow — the GHA-style CI matrix: one trigger node over a
+    # GENERATED child workflow; downstream sees a single verdict.
+    suite:
+      stage: test
+      matrix:
+        check: [lint, unit]
+        as: workflow
+      script: |
+        echo "suite ${{ matrix.check }} across all streams"
+        for f in streams/*.txt; do
+          echo "  ${{ matrix.check }}: $f ok"
+        done
+
+    # as: jobs (default) — three sibling jobs, each with its own
+    # promotion cursor: test[stream=alpha], test[stream=beta], ...
+    test:
+      stage: test
+      matrix:
+        stream: [alpha, beta, gamma]
+      artifacts:
+        paths: ["out-${{ matrix.stream }}/**"]
+        expire: "7d"
+      script: |
+        echo "testing stream ${{ matrix.stream }}"
+        test -f streams/${{ matrix.stream }}.txt
+        grep -q "stream: ${{ matrix.stream }}" streams/${{ matrix.stream }}.txt
+        mkdir -p out-${{ matrix.stream }}
+        cp streams/${{ matrix.stream }}.txt out-${{ matrix.stream }}/verified.txt
+        echo "verified-at: $CI_COMMIT_SHA" >> out-${{ matrix.stream }}/verified.txt
+
+    # Lane-to-lane promotion: each publish variant needs ONLY its own
+    # stream's test — a red beta lane leaves alpha and gamma shipping.
+    publish:
+      stage: publish
+      matrix:
+        stream: [alpha, beta, gamma]
+      needs:
+        - test[stream=${{ matrix.stream }}]
+      script: |
+        echo "publishing stream ${{ matrix.stream }}"
+        cat out-${{ matrix.stream }}/verified.txt
+        echo "published ${{ matrix.stream }}"

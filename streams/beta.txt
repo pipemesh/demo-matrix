@@ -1,0 +1,2 @@
+stream: beta
+payload: demo content for the beta lane

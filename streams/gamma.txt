@@ -1,0 +1,2 @@
+stream: gamma
+payload: demo content for the gamma lane
