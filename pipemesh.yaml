@@ -12,19 +12,6 @@ pipeline:
   stages: [test, publish]
 
   jobs:
-    # as: workflow — the GHA-style CI matrix: one trigger node over a
-    # GENERATED child workflow; downstream sees a single verdict.
-    suite:
-      stage: test
-      matrix:
-        check: [lint, unit]
-        as: workflow
-      script: |
-        echo "suite ${{ matrix.check }} across all streams"
-        for f in streams/*.txt; do
-          echo "  ${{ matrix.check }}: $f ok"
-        done
-
     # as: jobs (default) — three sibling jobs, each with its own
     # promotion cursor: test[stream=alpha], test[stream=beta], ...
     test:
@@ -41,6 +28,19 @@ pipeline:
         mkdir -p out-${{ matrix.stream }}
         cp streams/${{ matrix.stream }}.txt out-${{ matrix.stream }}/verified.txt
         echo "verified-at: $CI_COMMIT_SHA" >> out-${{ matrix.stream }}/verified.txt
+
+    # as: workflow — the GHA-style CI matrix: one trigger node over a
+    # GENERATED child workflow; downstream sees a single verdict.
+    suite:
+      stage: test
+      matrix:
+        check: [lint, unit]
+        as: workflow
+      script: |
+        echo "suite ${{ matrix.check }} across all streams"
+        for f in streams/*.txt; do
+          echo "  ${{ matrix.check }}: $f ok"
+        done
 
     # Lane-to-lane promotion: each publish variant needs ONLY its own
     # stream's test — a red beta lane leaves alpha and gamma shipping.
