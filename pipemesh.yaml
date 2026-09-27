@@ -6,8 +6,6 @@
 #
 # demo-* repos exercise engine features end-to-end on the production
 # instance without touching the pipemesh/pipemesh mainline.
-app: demo-matrix
-
 pipeline:
   stages: [test, publish]
 
@@ -54,3 +52,7 @@ pipeline:
         echo "publishing stream ${{ matrix.stream }}"
         cat out-${{ matrix.stream }}/verified.txt
         echo "published ${{ matrix.stream }}"
+
+pipemesh:
+  pipelines:
+    pipeline: !ref pipeline
