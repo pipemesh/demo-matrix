@@ -16,9 +16,8 @@ pipeline:
       stage: test
       matrix:
         stream: [alpha, beta, gamma]
-      artifacts:
-        paths: ["out-${{ matrix.stream }}/**"]
-        expire: "7d"
+      produces:
+        verified: { path: "out-${{ matrix.stream }}/verified.txt", expire: 7d }
       script: |
         echo "testing stream ${{ matrix.stream }}"
         test -f streams/${{ matrix.stream }}.txt
@@ -40,14 +39,14 @@ pipeline:
           echo "  ${{ matrix.check }}: $f ok"
         done
 
-    # Lane-to-lane promotion: each publish variant needs ONLY its own
-    # stream's test — a red beta lane leaves alpha and gamma shipping.
+    # Lane-to-lane promotion: each publish variant consumes ONLY its own
+    # stream's test entry — a red beta lane leaves alpha and gamma shipping.
     publish:
       stage: publish
       matrix:
         stream: [alpha, beta, gamma]
-      needs:
-        - test[stream=${{ matrix.stream }}]
+      consumes:
+        - "test[stream=${{ matrix.stream }}]/verified"
       script: |
         echo "publishing stream ${{ matrix.stream }}"
         cat out-${{ matrix.stream }}/verified.txt
