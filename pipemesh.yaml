@@ -39,16 +39,14 @@ pipeline:
           echo "  ${{ matrix.check }}: $f ok"
         done
 
-    # Lane-to-lane promotion: each publish variant needs ONLY its own
-    # stream's test — a red beta lane leaves alpha and gamma shipping — and
-    # consumes that lane's entry. needs: is what overrides the stage gate;
-    # consuming alone would add the lane edge and keep waiting on the stage.
+    # Lane-to-lane promotion: each publish variant consumes ONLY its own
+    # stream's test entry, and that is its whole dependency — an explicit
+    # dependency replaces the stage gate, so a red beta lane leaves alpha
+    # and gamma shipping.
     publish:
       stage: publish
       matrix:
         stream: [alpha, beta, gamma]
-      needs:
-        - test[stream=${{ matrix.stream }}]
       consumes:
         - "test[stream=${{ matrix.stream }}]/verified"
       script: |
