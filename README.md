@@ -18,9 +18,9 @@ The "project" is three text files under `streams/`; each lane verifies
 its own file, ships it as an artifact, and the publish lane reads it
 back — real artifact inheritance along the lane edge.
 
-Each `test` lane is a `kind: build` that checks out only its own file
+Each `test` lane is a `job_type: build` that checks out only its own file
 (`checkout: ["streams/${{ matrix.stream }}.txt"]`), and each `publish`
-lane is a `kind: deploy` that checks out nothing and ships its lane's
+lane is a `job_type: deploy` that checks out nothing and ships its lane's
 entry when it changed.
 
 Try it: edit exactly one `streams/<name>.txt` and watch only that
