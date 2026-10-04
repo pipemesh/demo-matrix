@@ -3,26 +3,35 @@
 # test → publish edges (matrix as: jobs — one broken stream must never
 # block the others), and a CI-style suite runs as one fused node
 # (matrix as: workflow — variants succeed or fail as a unit). Every job
-# says what it is (kind:) and what it reads (checkout:): a test lane
+# says what it is (job_type:) and what it reads (checkout:): a test lane
 # checks out its own stream's file, so editing one stream re-runs only
 # that lane.
 #
 # demo-* repos exercise engine features end-to-end on the production
 # instance without touching the pipemesh/pipemesh mainline.
 pipeline:
-  stages: [test, publish]
+  type: pipeline
+  stages:
+    - test
+    - publish
 
   jobs:
     # as: jobs (default) — three sibling jobs, each with its own
     # promotion cursor: test[stream=alpha], test[stream=beta], ...
     test:
-      kind: build
+      job_type: build
       stage: test
       matrix:
-        stream: [alpha, beta, gamma]
-      checkout: ["streams/${{ matrix.stream }}.txt"]
+        stream:
+          - alpha
+          - beta
+          - gamma
+      checkout:
+        - "streams/${{ matrix.stream }}.txt"
       produces:
-        verified: { path: "out-${{ matrix.stream }}/verified.txt", expire: 7d }
+        verified:
+          path: "out-${{ matrix.stream }}/verified.txt"
+          expire: 7d
       script: |
         echo "testing stream ${{ matrix.stream }}"
         test -f streams/${{ matrix.stream }}.txt
@@ -34,12 +43,15 @@ pipeline:
     # as: workflow — the GHA-style CI matrix: one node over a GENERATED
     # child workflow; downstream sees a single verdict.
     suite:
-      kind: build
+      job_type: build
       stage: test
       matrix:
-        check: [lint, unit]
+        check:
+          - lint
+          - unit
         as: workflow
-      checkout: [streams]
+      checkout:
+        - streams
       script: |
         echo "suite ${{ matrix.check }} across all streams"
         for f in streams/*.txt; do
@@ -52,10 +64,13 @@ pipeline:
     # and gamma shipping. A deploy checks out nothing: it ships when its
     # lane's entry changed.
     publish:
-      kind: deploy
+      job_type: deploy
       stage: publish
       matrix:
-        stream: [alpha, beta, gamma]
+        stream:
+          - alpha
+          - beta
+          - gamma
       consumes:
         - "test[stream=${{ matrix.stream }}]/verified"
       script: |
