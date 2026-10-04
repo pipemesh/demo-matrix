@@ -1,6 +1,6 @@
 # demo-matrix
 
-A **dogfooding demo repo** for [PipeMesh](https://pipemesh.dev) — fake
+A **dogfooding demo repo** for [Pipemesh](https://pipemesh.io) — fake
 project, real pipeline. `demo-*` repos exercise engine features
 end-to-end on the production instance without touching the
 `pipemesh/pipemesh` mainline.
@@ -18,8 +18,12 @@ The "project" is three text files under `streams/`; each lane verifies
 its own file, ships it as an artifact, and the publish lane reads it
 back — real artifact inheritance along the lane edge.
 
+Each `test` lane is a `kind: build` that checks out only its own file
+(`checkout: ["streams/${{ matrix.stream }}.txt"]`), and each `publish`
+lane is a `kind: deploy` that checks out nothing and ships its lane's
+entry when it changed.
+
 Try it: edit exactly one `streams/<name>.txt` and watch only that
-stream's lanes run (changed-path rules would narrow further; here every
-lane runs per revision, which is the point — the demo shows lane
-independence, not skip logic). Corrupt the `stream:` line in one file
-to see that lane go red while the others keep shipping.
+stream's lanes run; the others reuse their earlier runs. Corrupt the
+`stream:` line in one file to see that lane go red while the others keep
+shipping.
