@@ -73,7 +73,7 @@ pipeline:
           - beta
           - gamma
       consumes:
-        - "test[stream=${{ matrix.stream }}]/verified"
+        VERIFIED: "test[stream=${{ matrix.stream }}]/verified"
       script: |
         echo "publishing stream ${{ matrix.stream }}"
         cat out-${{ matrix.stream }}/verified.txt
