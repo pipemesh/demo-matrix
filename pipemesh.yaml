@@ -32,10 +32,28 @@ pipeline:
         verified:
           path: "out-${{ matrix.stream }}/verified.txt"
           expire: 7d
+      # Each lane's own report: its checks, passing or failing, in the
+      # lane's Reports tab. A report is for people: no job consumes it.
+      reports:
+        checks:
+          path: report/checks.md
+          title: "Stream ${{ matrix.stream }}"
+          expire: 7d
       script: |
-        echo "testing stream ${{ matrix.stream }}"
-        test -f streams/${{ matrix.stream }}.txt
-        grep -q "stream: ${{ matrix.stream }}" streams/${{ matrix.stream }}.txt
+        s=${{ matrix.stream }}; f=streams/$s.txt
+        echo "testing stream $s"
+        mkdir -p report; : > report/rows.md; failed=0
+        check() {
+          if "${@:2}" >/dev/null 2>&1; then echo "| ✅ | $1 |" >> report/rows.md
+          else echo "| ❌ | $1 |" >> report/rows.md; failed=$((failed + 1)); fi
+        }
+        check "$f exists" test -f "$f"
+        check "it names its stream ($s)" grep -q "^stream: $s$" "$f"
+        check "it carries a payload" grep -q "^payload: " "$f"
+        { if [ "$failed" -eq 0 ]; then echo "# ✅ Stream $s verified"; else echo "# ❌ Stream $s: $failed checks failed"; fi
+          printf '\n| | Check |\n|---|---|\n'; cat report/rows.md
+          printf '\n```\n%s\n```\n' "$(cat "$f" 2>/dev/null)"; } > report/checks.md
+        [ "$failed" -eq 0 ] || { echo "stream $s failed $failed checks (see its report)"; exit 1; }
         mkdir -p out-${{ matrix.stream }}
         cp streams/${{ matrix.stream }}.txt out-${{ matrix.stream }}/verified.txt
         echo "verified-at: $CI_COMMIT_SHA" >> out-${{ matrix.stream }}/verified.txt
@@ -52,10 +70,18 @@ pipeline:
         as: workflow
       checkout:
         - streams
+      # Each variant of the generated workflow reports too.
+      reports:
+        suite:
+          path: suite.md
+          title: "Suite: ${{ matrix.check }}"
+          expire: 7d
       script: |
         echo "suite ${{ matrix.check }} across all streams"
+        { echo "# ${{ matrix.check }} across all streams"; echo; echo "| Stream | Result |"; echo "|---|---|"; } > suite.md
         for f in streams/*.txt; do
           echo "  ${{ matrix.check }}: $f ok"
+          echo "| \`$f\` | ✅ ok |" >> suite.md
         done
 
     # Lane-to-lane promotion: each publish variant consumes ONLY its own

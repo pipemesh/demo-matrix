@@ -23,6 +23,11 @@ Each `test` lane is a `job_type: build` that checks out only its own file
 lane is a `job_type: deploy` that checks out nothing and ships its lane's
 entry when it changed.
 
+**Reports per lane:** each `test` lane writes its checks as a Markdown
+report (`reports:`, titled `Stream <name>`), passing or failing, and each
+`suite` variant inside the generated workflow writes its own. Corrupt a
+stream and its lane's Reports tab says which check failed.
+
 Try it: edit exactly one `streams/<name>.txt` and watch only that
 stream's lanes run; the others reuse their earlier runs. Corrupt the
 `stream:` line in one file to see that lane go red while the others keep
